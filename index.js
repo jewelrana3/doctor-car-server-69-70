@@ -1,18 +1,20 @@
 const express = require('express')
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 const app = express();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 
 // middleware
-const corsConfig = {
-  origin: '*',
-  // credentials: true,
-  // methods: ['GET', 'POST', 'PUT', 'DELETE']
-}
-app.use(cors(corsConfig))
-app.options("", cors(corsConfig))
+// const corsConfig = {
+//   origin: '*',
+//   // credentials: true,
+//   // methods: ['GET', 'POST', 'PUT', 'DELETE']
+// }
+// app.use(cors(corsConfig))
+// app.options("", cors(corsConfig))
+app.use(cors())
 app.use(express.json())
 
 
@@ -28,6 +30,17 @@ const client = new MongoClient(uri, {
   }
 });
 
+const verifyJWT=(req,res,next)=>{
+  console.log('hitting server side')
+  console.log(req.headers.authorization);
+  const authorization = req.headers.authorization;
+  if(!authorization){
+    return res.status(401).send({errpr:true,message:'unathurization acess'})
+  }
+  const token = authorization.split(' ')[1]
+  console.log('right the boss',token)
+}
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -36,11 +49,24 @@ async function run() {
 
     const carCollection = client.db('carDoctors').collection('servies');
     const cheakOut = client.db('carDoctors').collection('out');
+    
+    // jwt
 
+    app.post('/jwt',(req,res)=>{
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user,process.env.ACCESS_TOKEN,{
+        expiresIn:'1h'
+      });
+      console.log(token)
+      res.send({token})
+    })
+    // cars router
     app.get('/cars',async(req,res)=>{
         const id = req.params.id;
         const cursor = carCollection.find();
         const result = await cursor.toArray();
+   
         res.send(result)
     });
 
@@ -55,8 +81,10 @@ async function run() {
         res.send(result)
     });
 
-    app.get('/out',async(req,res)=>{
-      console.log(req.query.email)
+
+    // out router
+    app.get('/out',verifyJWT, async(req,res)=>{
+      // console.log(req.headers.authorization)
      let query = {}
      if(req.query?.email){
       query = {email:req.query.email}
@@ -72,17 +100,7 @@ async function run() {
       res.send(result)
     });
 
-    // app.patch('/out/:id',async(req,res)=>{
-    //   const id = req.params.id;
-    //   const filter = {_id: new ObjectId(id)}
-    //   const book = req.body;
-    //   console.log(book)
-    //   const updateDoc = {
-    //     $set: {
-    //       status:book.status
-    //     },
-    //   };
-    // })
+    
     app.patch('/out/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
