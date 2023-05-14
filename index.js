@@ -1,12 +1,18 @@
 const express = require('express')
 const cors = require('cors')
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors())
+const corsConfig = {
+  origin: '*',
+  // credentials: true,
+  // methods: ['GET', 'POST', 'PUT', 'DELETE']
+}
+app.use(cors(corsConfig))
+app.options("", cors(corsConfig))
 app.use(express.json())
 
 
@@ -42,7 +48,7 @@ async function run() {
         const id = req.params.id;
         const query = {_id: new ObjectId(id)}
         const options = {
-            projection: { price:1, title: 1, service_id:1 },
+            projection: { price:1, title: 1, service_id:1 ,img:1},
       
           };
         const result = await carCollection.findOne(query,options);
@@ -59,11 +65,48 @@ async function run() {
       res.send(result) 
     })
 
-    app.post('/cheakout',async(req,res)=>{
+    app.post('/out',async(req,res)=>{
       const cheakout = req.body;
       console.log(cheakout);
       const result = await cheakOut.insertOne(cheakout)
       res.send(result)
+    });
+
+    // app.patch('/out/:id',async(req,res)=>{
+    //   const id = req.params.id;
+    //   const filter = {_id: new ObjectId(id)}
+    //   const book = req.body;
+    //   console.log(book)
+    //   const updateDoc = {
+    //     $set: {
+    //       status:book.status
+    //     },
+    //   };
+    // })
+    app.patch('/out/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedBooking = req.body;
+      console.log(updatedBooking);
+      const updateDoc = {
+          $set: {
+              status: updatedBooking.status
+          },
+      };
+      const result = await cheakOut.updateOne(filter,updateDoc)
+      res.send(result)
+     
+  })
+   
+       
+     
+    
+
+    app.delete('/out/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id:new ObjectId(id)}
+      const result = await cheakOut.deleteOne(query);
+      res.send(query);
     })
 
     // Send a ping to confirm a successful connection
