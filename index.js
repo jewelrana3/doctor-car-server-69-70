@@ -30,15 +30,33 @@ const client = new MongoClient(uri, {
   }
 });
 
-const verifyJWT=(req,res,next)=>{
-  console.log('hitting server side')
-  console.log(req.headers.authorization);
+// const verifyJWT=(req,res,next)=>{
+//   const authorization = req.headers.authorization;
+//   if(!authorization){
+//     return res.status(401).send({error:true,message:'unauthorization access'})
+//   }
+//   const token = authorization.split(' ')[1];
+//  jwt.verify(token,process.env.ACCESS_TOKEN,(err,decoded)=>{
+//   if(err){
+//     return res.status(401).send ({err:true,message:'unauthorization verify '})
+//   }
+//   req.decoded;
+//   next();
+//  })
+// }
+const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
-  if(!authorization){
-    return res.status(401).send({errpr:true,message:'unathurization acess'})
-  }
-  const token = authorization.split(' ')[1]
-  console.log('right the boss',token)
+    if(!authorization){
+        return res.status(401).send({error: true, message: 'unauthorized access'});
+    }
+    const token = authorization.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded)=>{
+        if(err){
+            return res.status(401).send({error: true, message: 'unauthorized access'})
+        }
+        req.decoded = decoded;
+        next();
+    })
 }
 
 async function run() {
@@ -56,8 +74,7 @@ async function run() {
       const user = req.body;
       console.log(user);
       const token = jwt.sign(user,process.env.ACCESS_TOKEN,{
-        expiresIn:'1h'
-      });
+        expiresIn:'1h' });
       console.log(token)
       res.send({token})
     })
@@ -83,8 +100,13 @@ async function run() {
 
 
     // out router
-    app.get('/out',verifyJWT, async(req,res)=>{
-      // console.log(req.headers.authorization)
+    app.get('/out',verifyJWT,  async(req,res)=>{
+      const decoded = req.decoded;
+      console.log('came back to verify',decoded)
+
+      if(decoded.email !== req.query.email){
+        return res.status(403).send({err:1,message:'forbiden access'})
+      }
      let query = {}
      if(req.query?.email){
       query = {email:req.query.email}
